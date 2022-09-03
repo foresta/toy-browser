@@ -1,4 +1,5 @@
 use crate::dom::AttrMap;
+use combine::any;
 use combine::parser::char::char;
 use combine::parser::char::letter;
 use combine::parser::char::newline;
@@ -45,6 +46,20 @@ where
     })
 }
 
+fn open_tag<Input>() -> impl Parser<Input, Output = (String, AttrMap)>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let tag_name = many1::<String, _, _>(letter());
+    let tag_content = (
+        tag_name,
+        many::<String, _, _>(space().or(newline())),
+        attributes(),
+    );
+    between(char('<'), char('>'), tag_content).map(|(tag_name, _, attrs)| (tag_name, attrs))
+}
+
 mod test {
     use super::*;
     #[allow(unused_imports)]
@@ -69,5 +84,28 @@ mod test {
         );
 
         assert_eq!(attributes().easy_parse(""), Ok((AttrMap::new(), "")))
+    }
+
+    #[test]
+    fn test_parse_open_tag() {
+        println!("{:?}", open_tag().easy_parse("<hoge hogehoge>"));
+
+        {
+            assert_eq!(
+                open_tag().easy_parse("<p>aaa"),
+                Ok((("p".to_string(), AttrMap::new()), "aaa"))
+            )
+        }
+        {
+            let mut attributes = AttrMap::new();
+            attributes.insert("id".to_string(), "test".to_string());
+            assert_eq!(
+                open_tag().easy_parse("<p id=\"test\">"),
+                Ok((("p".to_string(), attributes), ""))
+            )
+        }
+        {
+            assert!(open_tag().easy_parse("<p id>").is_err());
+        }
     }
 }
