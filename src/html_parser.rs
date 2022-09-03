@@ -1,5 +1,4 @@
 use crate::dom::AttrMap;
-use combine::any;
 use combine::parser::char::char;
 use combine::parser::char::letter;
 use combine::parser::char::newline;
@@ -12,16 +11,17 @@ use combine::ParseError;
 use combine::Stream;
 use combine::{between, many, many1, satisfy};
 
+#[allow(dead_code)]
 fn attribute<Input>() -> impl Parser<Input, Output = (String, String)>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
     (
-        many1::<String, _, _>(letter()), // read attribute name any letters
-        many::<String, _, _>(space().or(newline())), // skip read space and newline
-        char('='),                       // read '='
-        many::<String, _, _>(space().or(newline())), // skip read space and newline
+        many1::<String, _, _>(letter().or(char('-'))), // read attribute name any letters
+        many::<String, _, _>(space().or(newline())),   // skip read space and newline
+        char('='),                                     // read '='
+        many::<String, _, _>(space().or(newline())),   // skip read space and newline
         between(
             char('"'),
             char('"'),
@@ -31,6 +31,7 @@ where
         .map(|v| (v.0, v.4))
 }
 
+#[allow(dead_code)]
 fn attributes<Input>() -> impl Parser<Input, Output = AttrMap>
 where
     Input: Stream<Token = char>,
@@ -46,6 +47,7 @@ where
     })
 }
 
+#[allow(dead_code)]
 fn open_tag<Input>() -> impl Parser<Input, Output = (String, AttrMap)>
 where
     Input: Stream<Token = char>,
@@ -60,16 +62,17 @@ where
     between(char('<'), char('>'), tag_content).map(|(tag_name, _, attrs)| (tag_name, attrs))
 }
 
+#[allow(dead_code)]
 fn close_tag<Input>() -> impl Parser<Input, Output = String>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    todo!("implementation");
     many::<String, _, _>(letter()).map(|_| "".to_string())
 }
 
 mod test {
+    #[allow(unused_imports)]
     use super::*;
     #[allow(unused_imports)]
     use crate::dom::AttrMap;
@@ -97,8 +100,6 @@ mod test {
 
     #[test]
     fn test_parse_open_tag() {
-        println!("{:?}", open_tag().easy_parse("<hoge hogehoge>"));
-
         {
             assert_eq!(
                 open_tag().easy_parse("<p>aaa"),
