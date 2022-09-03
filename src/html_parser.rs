@@ -4,6 +4,7 @@ use combine::parser::char::letter;
 use combine::parser::char::newline;
 use combine::parser::char::space;
 use combine::parser::Parser;
+use combine::sep_by;
 #[allow(unused_imports)]
 use combine::EasyParser;
 use combine::ParseError;
@@ -34,7 +35,14 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    (char(' ')).map(|_| AttrMap::new())
+    sep_by::<Vec<(String, String)>, _, _, _>(
+        attribute(),
+        many::<String, _, _>(space().or(newline())),
+    )
+    .map(|attrs: Vec<(String, String)>| {
+        let m: AttrMap = attrs.into_iter().collect();
+        m
+    })
 }
 
 mod test {
