@@ -60,6 +60,15 @@ where
     between(char('<'), char('>'), tag_content).map(|(tag_name, _, attrs)| (tag_name, attrs))
 }
 
+fn close_tag<Input>() -> impl Parser<Input, Output = String>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    todo!("implementation");
+    many::<String, _, _>(letter()).map(|_| "".to_string())
+}
+
 mod test {
     use super::*;
     #[allow(unused_imports)]
@@ -107,5 +116,11 @@ mod test {
         {
             assert!(open_tag().easy_parse("<p id>").is_err());
         }
+    }
+
+    #[test]
+    fn test_parse_close_tag() {
+        let result = close_tag().easy_parse("</p>");
+        assert_eq!(result, Ok(("p".to_string(), "")))
     }
 }
