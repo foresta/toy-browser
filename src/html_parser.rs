@@ -1,4 +1,6 @@
-use crate::dom::AttrMap;
+use crate::dom::Node;
+#[allow(unused_imports)]
+use crate::dom::{AttrMap, Element, Text};
 use combine::parser::char::char;
 use combine::parser::char::letter;
 use combine::parser::char::newline;
@@ -77,11 +79,20 @@ where
         .map(|v| v.2)
 }
 
+#[allow(dead_code)]
+fn element<Input>() -> impl Parser<Input, Output = Box<Node>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    char(' ').map(|_| Text::new("".to_string()))
+}
+
 mod test {
     #[allow(unused_imports)]
     use super::*;
     #[allow(unused_imports)]
-    use crate::dom::AttrMap;
+    use crate::dom::{AttrMap, Element, Text};
 
     #[test]
     fn test_parse_attriute() {
@@ -129,5 +140,43 @@ mod test {
     fn test_parse_close_tag() {
         let result = close_tag().easy_parse("</p>");
         assert_eq!(result, Ok(("p".to_string(), "")))
+    }
+
+    #[test]
+    fn test_parse_element() {
+        assert_eq!(
+            element().easy_parse("<p></p>"),
+            Ok((Element::new("p".to_string(), AttrMap::new(), vec![]), ""))
+        );
+
+        assert_eq!(
+            element().easy_parse("<p>hello world</p>"),
+            Ok((
+                Element::new(
+                    "p".to_string(),
+                    AttrMap::new(),
+                    vec![Text::new("hello world".to_string())]
+                ),
+                ""
+            ))
+        );
+
+        assert_eq!(
+            element().easy_parse("<div><p>hello world</p></div>"),
+            Ok((
+                Element::new(
+                    "div".to_string(),
+                    AttrMap::new(),
+                    vec![Element::new(
+                        "p".to_string(),
+                        AttrMap::new(),
+                        vec![Text::new("hello world".to_string())]
+                    )]
+                ),
+                ""
+            ))
+        );
+
+        assert!(element().easy_parse("<p>hello world</div>").is_err());
     }
 }
