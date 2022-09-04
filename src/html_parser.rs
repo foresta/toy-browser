@@ -68,7 +68,13 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    many::<String, _, _>(letter()).map(|_| "".to_string())
+    (
+        char('<'),
+        char('/'),
+        many1::<String, _, _>(letter()),
+        char('>'),
+    )
+        .map(|v| v.2)
 }
 
 mod test {
