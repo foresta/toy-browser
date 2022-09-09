@@ -1,6 +1,10 @@
 use crate::dom::Node;
 #[allow(unused_imports)]
 use crate::dom::{AttrMap, Element, Text};
+use combine::attempt;
+use combine::choice;
+use combine::error::StreamError;
+use combine::parser;
 use combine::parser::char::char;
 use combine::parser::char::letter;
 use combine::parser::char::newline;
@@ -79,13 +83,51 @@ where
         .map(|v| v.2)
 }
 
+parser! {
+    fn contents[Input]()(Input) -> Vec<Box<Node>>
+        where [Input: Stream<Token = char>]
+    {
+        contents_()
+    }
+}
+
+fn contents_<Input>() -> impl Parser<Input, Output = Vec<Box<Node>>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    attempt(many(choice((attempt(element()), attempt(text())))))
+}
+
+fn text<Input>() -> impl Parser<Input, Output = Box<Node>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    many1(satisfy(|c: char| c != '<')).map(|t| Text::new(t))
+}
+
 #[allow(dead_code)]
 fn element<Input>() -> impl Parser<Input, Output = Box<Node>>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    char(' ').map(|_| Text::new("".to_string()))
+    (open_tag(), contents(), close_tag()).and_then(
+        |((open_tag_name, attributes), children, close_tag_name)| {
+            if open_tag_name == close_tag_name {
+                Ok(Element::new(open_tag_name, attributes, children))
+            } else {
+                Err(<Input::Error as combine::error::ParseError<
+                    char,
+                    Input::Range,
+                    Input::Position,
+                >>::StreamError::message_static_message(
+                    "tag name of open tag and close tag mismatched",
+                ))
+            }
+        },
+    )
 }
 
 mod test {
@@ -144,6 +186,11 @@ mod test {
 
     #[test]
     fn test_parse_element() {
+        println!(
+            "{:?}",
+            element().easy_parse("<div><p>hello world</p><span class=\"red\">hoge</span></div>")
+        );
+
         assert_eq!(
             element().easy_parse("<p></p>"),
             Ok((Element::new("p".to_string(), AttrMap::new(), vec![]), ""))
