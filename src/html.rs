@@ -186,11 +186,6 @@ mod test {
 
     #[test]
     fn test_parse_element() {
-        println!(
-            "{:?}",
-            element().easy_parse("<div><p>hello world</p><span class=\"red\">hoge</span></div>")
-        );
-
         assert_eq!(
             element().easy_parse("<p></p>"),
             Ok((Element::new("p".to_string(), AttrMap::new(), vec![]), ""))
