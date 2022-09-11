@@ -8,6 +8,7 @@ use combine::parser::char::letter;
 use combine::parser::char::newline;
 use combine::parser::char::space;
 use combine::parser::char::string;
+use combine::sep_by;
 use combine::sep_end_by;
 use combine::ParseError;
 use combine::Parser;
@@ -116,7 +117,10 @@ where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    char(' ').map(|_| vec![SimpleSelector::UniversalSelector])
+    sep_by::<Vec<Selector>, _, _, _>(
+        simple_selector().skip(whitespaces()),
+        char(',').skip(whitespaces()),
+    )
 }
 
 #[allow(dead_code)]
@@ -241,7 +245,7 @@ mod tests {
     #[test]
     fn test_selectors() {
         assert_eq!(
-            selectors().parse("test[foo=bar], a"),
+            selectors().parse("test[foo=bar],a"),
             Ok((
                 vec![
                     SimpleSelector::AttributeSelector {
