@@ -18,6 +18,12 @@ pub struct Stylesheet {
     pub rules: Vec<Rule>,
 }
 
+impl Stylesheet {
+    fn new(rules: Vec<Rule>) -> Stylesheet {
+        Stylesheet { rules: rules }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Rule {
     pub selectors: Vec<Selector>,
@@ -218,15 +224,37 @@ where
     )
 }
 
+#[allow(dead_code)]
 fn rule<Input>() -> impl Parser<Input, Output = Rule>
 where
     Input: Stream<Token = char>,
     Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
 {
-    char(' ').map(|_| Rule {
-        selectors: vec![],
-        declarations: vec![],
-    })
+    (
+        selectors().skip(whitespaces()),
+        char('{').skip(whitespaces()),
+        declarations().skip(whitespaces()),
+        char('}').skip(whitespaces()),
+    )
+        .map(|(selectors, _, declarations, _)| Rule {
+            selectors: selectors,
+            declarations: declarations,
+        })
+}
+
+fn rules<Input>() -> impl Parser<Input, Output = Vec<Rule>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    (whitespaces(), many(rule().skip(whitespaces()))).map(|(_, rules)| rules)
+}
+
+pub fn parse(raw: String) -> Stylesheet {
+    rules()
+        .parse(raw.as_str())
+        .map(|(rules, _)| Stylesheet::new(rules))
+        .unwrap()
 }
 
 mod tests {
